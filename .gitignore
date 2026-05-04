@@ -37,6 +37,8 @@
 *.pyc
 ehthumbs.db
 Thumbs.db
+*.swp
+*.swo
 
 # Ignore ImageNet Pre-trained Models #
 ######################################
