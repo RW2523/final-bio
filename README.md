@@ -20,6 +20,11 @@ Please download the dataset and decompress them under the `data` directory befor
 - HHAR [link](http://archive.ics.uci.edu/ml/datasets/heterogeneity+activity+recognition)
 - WISDM [link](https://www.cis.fordham.edu/wisdm/dataset.php)
 
+For WISDM specifically, this repo expects the **AR v1.1** layout with `raw/phone/accel`, `raw/phone/gyro`, etc.
+If you cloned this repository with the bundled data, you can point preprocessing at:
+
+- `./wisdm-dataset` (recommended; also the default `--wisdm_data_dir` for `main_ssl.py`)
+
 ## Running ANNs
 
 ```bash
@@ -58,6 +63,49 @@ python main_ssl.py --dataset wisdm --device Phones --framework simclr --backbone
 ```
 
 Checkpoints are named with an `_ispf` suffix so they do not collide with runs that use the same flags but a different backbone. A Slurm example is in `sbatch/wisdm_simclr_ispikformer.sbatch`.
+
+### Experimental spiking transformer: `SpikeFormer` (`--backbone SpikeFormer`)
+
+This is a **new exploratory spiking self-attention backbone** implemented in **pure PyTorch** under `models/exp_spikeformer/`.
+It is intentionally separate from the vendored **iSpikformer / SpikingJelly** stack in `models/local_ispikformer/`.
+
+**Input / encoding:** `SpikeFormer` uses the same `--input_encoding` pipeline as the rest of the repo (`none`, `zcsf`, `arima`, `zcsf_arima`) via `trainer.apply_input_encoding()`.
+
+**SSL entrypoint:** use `main_ssl.py` (same SimCLR/BYOL/etc. frameworks as other backbones).
+
+**Model hyperparameters (CLI):**
+
+- `--spk_tf_dim` (embedding size; also the linear-probe input dim)
+- `--spk_tf_depth` (number of spiking transformer blocks)
+- `--spk_tf_heads` (attention heads; must divide `--spk_tf_dim`)
+- `--spk_tf_mlp_ratio` (FFN expansion ratio)
+- `--spk_tf_dropout`, `--spk_tf_attn_dropout`
+- `--spk_tf_spike_threshold` (threshold for the surrogate LIF-style spike nonlinearity used inside attention/MLP)
+
+**Note:** `--tau` / `--thresh` in `main_ssl.py` are used by *other* SNN backbones (SFCN/SDCL/etc.). They are **not** the primary knobs for `SpikeFormer` (use `--spk_tf_spike_threshold` instead).
+
+Example (WISDM + SimCLR + `SpikeFormer`):
+
+```bash
+python main_ssl.py \
+  --dataset wisdm \
+  --device Phones \
+  --framework simclr \
+  --backbone SpikeFormer \
+  --wisdm_data_dir ./wisdm-dataset \
+  --wisdm_feat fdiff \
+  --input_encoding none \
+  --spk_tf_dim 256 \
+  --spk_tf_depth 4 \
+  --spk_tf_heads 8 \
+  --aug1 jit_scal \
+  --aug2 perm_jit \
+  --batch_size 32 \
+  --pretrain_epochs 70 \
+  --lincls_epochs 70
+```
+
+Run artifacts are tagged with a `_spktf` suffix in `trainer.setup()` naming to reduce checkpoint collisions vs other backbones.
 
 
 ## Acknowledgement
