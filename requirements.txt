@@ -1,0 +1,16 @@
+# Use PyTorch 2.x; 1.10 is no longer published for current Python / manylinux wheels.
+# If you need a specific CUDA build, see https://pytorch.org/get-started/locally/
+torch>=2.2.0,<3
+torchvision>=0.17.0
+# 1.4+ needed for NumPy 2.x (older sklearn: ImportError ComplexWarning from numpy.core.numeric)
+scikit-learn>=1.4.0
+snntorch>=0.6.0
+# iSpikformer / SNN_Transformer (vendored SeqSNN-style stack)
+spikingjelly>=0.0.0.0.14
+matplotlib>=3.3.0
+pandas>=1.2.0
+einops>=0.3.2
+seaborn>=0.11.0
+pickle5>=0.0.11; python_version<"3.8"
+fitlog
+requests
