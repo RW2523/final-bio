@@ -44,8 +44,8 @@ Thumbs.db
 .venv/
 .nfs4f30797b06d9f65400022a42
 
-# ---- SNN_HAR repo-specific (do not commit datasets / outputs) ----
-wisdm-dataset/
+# ---- SNN_HAR repo-specific (do not commit generated outputs) ----
+# WISDM AR v1.1 raw data is tracked in-repo (see wisdm-dataset/).
 dataset/
 data/
 results/
