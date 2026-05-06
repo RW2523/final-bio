@@ -1,0 +1,321 @@
+Running max-F1 SNN_Transformer recipe with INPUT_ENCODING=hybrid_ds_rate
+EXTRA_FLAGS=--lincls_loss ce --lincls_label_smoothing 0.05 --lincls_scheduler onecycle --lincls_grad_clip 1.0 --lincls_select_metric macrof1 --lincls_logit_adjust_tau 0.25 --lincls_calibrate_temperature --lincls_temp_min 0.7 --lincls_temp_max 1.8 --lincls_temp_steps 12 --lincls_finetune_backbone --lincls_finetune_scope last_block --lincls_backbone_lr 2e-4 --early_stop_patience 12 --early_stop_min_delta 0.02 --snn_tf_channel_gate se --snn_tf_gate_reduction 4 --ispf_tau 2.0 --ispf_common_thr 1.0 --ispf_detach_reset 1 --report_sparsity
+Running: python main_ssl_research.py --dataset wisdm --cases random --device Watch --wisdm_data_dir /home/sriramkannan_umass_edu/690R-BioMarkers/wisdm-dataset --wisdm_feat raw --framework simclr --backbone SNN_Transformer --tau 0.75 --thresh 0.5 --batch_log_every 10 --aug1 jit_scal --aug2 perm_jit --p 128 --phid 128 --pretrain_epochs 120 --lincls_epochs 120 --batch_size 128 --lr 1e-3 --lr_cls 1.5e-3 --early_stop_patience 0 --input_encoding hybrid_ds_rate --bio_source_hz 20 --bio_resample_hz 30 --bio_window_seconds 10 --bio_stride_seconds 5 --bio_filter_mode motion_gravity --bio_gravity_cutoff_hz 0.25 --bio_motion_low_hz 0.25 --bio_motion_high_hz 15 --sf_threshold 0.15 --mw_window 8 --mw_threshold 0.15 --encoding_norm_eps 1e-6 --criterion NTXent --simclr_contrastive supcon --supcon_temperature 0.07 --lincls_loss ce --lincls_label_smoothing 0.05 --lincls_scheduler onecycle --lincls_grad_clip 1.0 --lincls_select_metric macrof1 --lincls_logit_adjust_tau 0.25 --lincls_calibrate_temperature --lincls_temp_min 0.7 --lincls_temp_max 1.8 --lincls_temp_steps 12 --lincls_finetune_backbone --lincls_finetune_scope last_block --lincls_backbone_lr 2e-4 --early_stop_patience 12 --early_stop_min_delta 0.02 --snn_tf_channel_gate se --snn_tf_gate_reduction 4 --ispf_tau 2.0 --ispf_common_thr 1.0 --ispf_detach_reset 1 --report_sparsity
+device: cuda:0 dataset: wisdm framework: simclr backbone: SNN_Transformer
+Namespace(cuda=0, rep=1, eval=False, cleanup_checkpoints=False, dataset='wisdm', cases='random', split_ratio=0.2, target_domain='1600', device='Watch', n_feature=9, len_sw=300, n_class=18, wisdm_feat='raw', wisdm_top_k_classes=0, wisdm_data_dir='/home/sriramkannan_umass_edu/690R-BioMarkers/wisdm-dataset', wisdm_fused12=False, batch_size=128, n_epoch=120, pretrain_epochs=120, lincls_epochs=120, lr=0.001, lr_cls=0.0015, lincls_head='linear', lincls_hidden_dim=512, lincls_hidden_dim2=256, lincls_dropout=0.2, lincls_finetune_backbone=True, lincls_finetune_scope='last_block', lincls_backbone_lr=0.0002, lincls_label_smoothing=0.05, lincls_scheduler='onecycle', lincls_grad_clip=1.0, lincls_select_metric='macrof1', lincls_logit_adjust_tau=0.25, lincls_calibrate_temperature=True, lincls_temp_min=0.7, lincls_temp_max=1.8, lincls_temp_steps=12, early_stop_patience=12, early_stop_min_delta=0.02, scheduler=True, logdir='log/', batch_log_every=10, framework='simclr', backbone='SNN_Transformer', dcl_conv_kernels=64, dcl_kernel_size=5, dcl_lstm_units=128, ispf_dim=512, ispf_d_ff=0, ispf_depths=2, ispf_num_steps=4, ispf_heads=8, ispf_encoder='conv', spk_tf_dim=256, spk_tf_depth=4, spk_tf_heads=8, spk_tf_mlp_ratio=4.0, spk_tf_dropout=0.1, spk_tf_attn_dropout=0.1, spk_tf_spike_threshold=0.5, vit_patch_size=20, vit_dim=128, vit_depth=4, vit_heads=4, vit_mlp_dim=256, vit_dropout=0.1, criterion='NTXent', aug1='jit_scal', aug2='perm_jit', p=128, phid=128, EMA=0.996, lr_mul=1.0, weight_decay=1e-06, temp_unit='tsfm', mmb_size=1024, lambda1=1.0, lambda2=1.0, tau=0.75, thresh=0.5, input_encoding='hybrid_ds_rate', zcsf_step=0.1, arima_diff_order=1, arima_eps=1e-06, skip_pretrain=False, ssl_ckpt='', ssl_ckpt_strict=False, use_augpred=False, augpred_lambda=0.5, augpred_transforms='na,t_flip,perm,t_warp,jit_scal,noise,scale,rotation', simclr_contrastive='supcon', supcon_temperature=0.07, bio_source_hz=20.0, bio_resample_hz=30.0, bio_window_seconds=10.0, bio_stride_seconds=5.0, bio_filter_mode='motion_gravity', bio_gravity_cutoff_hz=0.25, bio_motion_low_hz=0.25, bio_motion_high_hz=15.0, encoding_norm_eps=1e-06, sf_threshold=0.15, mw_window=8, mw_threshold=0.15, lincls_loss='ce', focal_gamma=2.0, cb_beta=0.999, snn_tf_channel_gate='se', snn_tf_gate_reduction=4, ispf_common_thr=1.0, ispf_tau=2.0, ispf_detach_reset=1, report_sparsity=True, sparsity_eps=1e-08, model_name='try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon')
+[pretrain] epoch 1/120 start
+
+Epoch : 0
+[pretrain] epoch 1/120 loader=1/1 batch=10/156 avg_loss=2.8924
+[pretrain] epoch 1/120 loader=1/1 batch=20/156 avg_loss=2.8878
+[pretrain] epoch 1/120 loader=1/1 batch=30/156 avg_loss=2.8868
+[pretrain] epoch 1/120 loader=1/1 batch=40/156 avg_loss=2.8894
+[pretrain] epoch 1/120 loader=1/1 batch=50/156 avg_loss=2.8886
+[pretrain] epoch 1/120 loader=1/1 batch=60/156 avg_loss=2.8881
+[pretrain] epoch 1/120 loader=1/1 batch=70/156 avg_loss=2.8887
+[pretrain] epoch 1/120 loader=1/1 batch=80/156 avg_loss=2.8899
+[pretrain] epoch 1/120 loader=1/1 batch=90/156 avg_loss=2.8890
+[pretrain] epoch 1/120 loader=1/1 batch=100/156 avg_loss=2.8900
+[pretrain] epoch 1/120 loader=1/1 batch=110/156 avg_loss=2.8913
+[pretrain] epoch 1/120 loader=1/1 batch=120/156 avg_loss=2.8912
+[pretrain] epoch 1/120 loader=1/1 batch=130/156 avg_loss=2.8904
+[pretrain] epoch 1/120 loader=1/1 batch=140/156 avg_loss=2.8907
+[pretrain] epoch 1/120 loader=1/1 batch=150/156 avg_loss=2.8913
+Saving model at 0 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon0.pt
+Train Loss     : 2.8914
+[pretrain] epoch 1/120 train_loss=2.8914
+[pretrain_sparsity] epoch 0 input_sparsity=0.4571 spike_sparsity=0.9725 spike_density=0.0275
+update
+Val Loss     : 2.8899
+[pretrain] epoch 1/120 val_loss=2.8899 epoch_time=37.1s total=0.6m
+[pretrain] epoch 2/120 start
+
+Epoch : 1
+[pretrain] epoch 2/120 loader=1/1 batch=10/156 avg_loss=2.8845
+[pretrain] epoch 2/120 loader=1/1 batch=20/156 avg_loss=2.8935
+[pretrain] epoch 2/120 loader=1/1 batch=30/156 avg_loss=2.8920
+[pretrain] epoch 2/120 loader=1/1 batch=40/156 avg_loss=2.8958
+[pretrain] epoch 2/120 loader=1/1 batch=50/156 avg_loss=2.8943
+[pretrain] epoch 2/120 loader=1/1 batch=60/156 avg_loss=2.8931
+[pretrain] epoch 2/120 loader=1/1 batch=70/156 avg_loss=2.8931
+[pretrain] epoch 2/120 loader=1/1 batch=80/156 avg_loss=2.8935
+[pretrain] epoch 2/120 loader=1/1 batch=90/156 avg_loss=2.8941
+[pretrain] epoch 2/120 loader=1/1 batch=100/156 avg_loss=2.8941
+[pretrain] epoch 2/120 loader=1/1 batch=110/156 avg_loss=2.8930
+[pretrain] epoch 2/120 loader=1/1 batch=120/156 avg_loss=2.8929
+[pretrain] epoch 2/120 loader=1/1 batch=130/156 avg_loss=2.8935
+[pretrain] epoch 2/120 loader=1/1 batch=140/156 avg_loss=2.8943
+[pretrain] epoch 2/120 loader=1/1 batch=150/156 avg_loss=2.8939
+Saving model at 1 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon1.pt
+Train Loss     : 2.8939
+[pretrain] epoch 2/120 train_loss=2.8939
+[pretrain_sparsity] epoch 1 input_sparsity=0.4574 spike_sparsity=0.9716 spike_density=0.0284
+Val Loss     : 2.8899
+[pretrain] epoch 2/120 val_loss=2.8899 epoch_time=35.3s total=1.2m
+[pretrain] epoch 3/120 start
+
+Epoch : 2
+[pretrain] epoch 3/120 loader=1/1 batch=10/156 avg_loss=2.8832
+[pretrain] epoch 3/120 loader=1/1 batch=20/156 avg_loss=2.8899
+[pretrain] epoch 3/120 loader=1/1 batch=30/156 avg_loss=2.8932
+[pretrain] epoch 3/120 loader=1/1 batch=40/156 avg_loss=2.8922
+[pretrain] epoch 3/120 loader=1/1 batch=50/156 avg_loss=2.8950
+[pretrain] epoch 3/120 loader=1/1 batch=60/156 avg_loss=2.8954
+[pretrain] epoch 3/120 loader=1/1 batch=70/156 avg_loss=2.8922
+[pretrain] epoch 3/120 loader=1/1 batch=80/156 avg_loss=2.8925
+[pretrain] epoch 3/120 loader=1/1 batch=90/156 avg_loss=2.8934
+[pretrain] epoch 3/120 loader=1/1 batch=100/156 avg_loss=2.8926
+[pretrain] epoch 3/120 loader=1/1 batch=110/156 avg_loss=2.8930
+[pretrain] epoch 3/120 loader=1/1 batch=120/156 avg_loss=2.8934
+[pretrain] epoch 3/120 loader=1/1 batch=130/156 avg_loss=2.8934
+[pretrain] epoch 3/120 loader=1/1 batch=140/156 avg_loss=2.8931
+[pretrain] epoch 3/120 loader=1/1 batch=150/156 avg_loss=2.8916
+Saving model at 2 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon2.pt
+Train Loss     : 2.8913
+[pretrain] epoch 3/120 train_loss=2.8913
+[pretrain_sparsity] epoch 2 input_sparsity=0.4576 spike_sparsity=0.9725 spike_density=0.0275
+Val Loss     : 2.8899
+[pretrain] epoch 3/120 val_loss=2.8899 epoch_time=35.1s total=1.8m
+[pretrain] epoch 4/120 start
+
+Epoch : 3
+[pretrain] epoch 4/120 loader=1/1 batch=10/156 avg_loss=2.8866
+[pretrain] epoch 4/120 loader=1/1 batch=20/156 avg_loss=2.8916
+[pretrain] epoch 4/120 loader=1/1 batch=30/156 avg_loss=2.8906
+[pretrain] epoch 4/120 loader=1/1 batch=40/156 avg_loss=2.8889
+[pretrain] epoch 4/120 loader=1/1 batch=50/156 avg_loss=2.8902
+[pretrain] epoch 4/120 loader=1/1 batch=60/156 avg_loss=2.8900
+[pretrain] epoch 4/120 loader=1/1 batch=70/156 avg_loss=2.8918
+[pretrain] epoch 4/120 loader=1/1 batch=80/156 avg_loss=2.8927
+[pretrain] epoch 4/120 loader=1/1 batch=90/156 avg_loss=2.8937
+[pretrain] epoch 4/120 loader=1/1 batch=100/156 avg_loss=2.8931
+[pretrain] epoch 4/120 loader=1/1 batch=110/156 avg_loss=2.8933
+[pretrain] epoch 4/120 loader=1/1 batch=120/156 avg_loss=2.8941
+[pretrain] epoch 4/120 loader=1/1 batch=130/156 avg_loss=2.8927
+[pretrain] epoch 4/120 loader=1/1 batch=140/156 avg_loss=2.8927
+[pretrain] epoch 4/120 loader=1/1 batch=150/156 avg_loss=2.8923
+Saving model at 3 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon3.pt
+Train Loss     : 2.8922
+[pretrain] epoch 4/120 train_loss=2.8922
+[pretrain_sparsity] epoch 3 input_sparsity=0.4570 spike_sparsity=0.9726 spike_density=0.0274
+Val Loss     : 2.8899
+[pretrain] epoch 4/120 val_loss=2.8899 epoch_time=35.1s total=2.4m
+[pretrain] epoch 5/120 start
+
+Epoch : 4
+[pretrain] epoch 5/120 loader=1/1 batch=10/156 avg_loss=2.8867
+[pretrain] epoch 5/120 loader=1/1 batch=20/156 avg_loss=2.8856
+[pretrain] epoch 5/120 loader=1/1 batch=30/156 avg_loss=2.8885
+[pretrain] epoch 5/120 loader=1/1 batch=40/156 avg_loss=2.8909
+[pretrain] epoch 5/120 loader=1/1 batch=50/156 avg_loss=2.8869
+[pretrain] epoch 5/120 loader=1/1 batch=60/156 avg_loss=2.8866
+[pretrain] epoch 5/120 loader=1/1 batch=70/156 avg_loss=2.8874
+[pretrain] epoch 5/120 loader=1/1 batch=80/156 avg_loss=2.8891
+[pretrain] epoch 5/120 loader=1/1 batch=90/156 avg_loss=2.8881
+[pretrain] epoch 5/120 loader=1/1 batch=100/156 avg_loss=2.8888
+[pretrain] epoch 5/120 loader=1/1 batch=110/156 avg_loss=2.8887
+[pretrain] epoch 5/120 loader=1/1 batch=120/156 avg_loss=2.8895
+[pretrain] epoch 5/120 loader=1/1 batch=130/156 avg_loss=2.8896
+[pretrain] epoch 5/120 loader=1/1 batch=140/156 avg_loss=2.8900
+[pretrain] epoch 5/120 loader=1/1 batch=150/156 avg_loss=2.8906
+Saving model at 4 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon4.pt
+Train Loss     : 2.8908
+[pretrain] epoch 5/120 train_loss=2.8908
+[pretrain_sparsity] epoch 4 input_sparsity=0.4570 spike_sparsity=0.9726 spike_density=0.0274
+Val Loss     : 2.8899
+[pretrain] epoch 5/120 val_loss=2.8899 epoch_time=35.2s total=3.0m
+[pretrain] epoch 6/120 start
+
+Epoch : 5
+[pretrain] epoch 6/120 loader=1/1 batch=10/156 avg_loss=2.8814
+[pretrain] epoch 6/120 loader=1/1 batch=20/156 avg_loss=2.8860
+[pretrain] epoch 6/120 loader=1/1 batch=30/156 avg_loss=2.8867
+[pretrain] epoch 6/120 loader=1/1 batch=40/156 avg_loss=2.8887
+[pretrain] epoch 6/120 loader=1/1 batch=50/156 avg_loss=2.8872
+[pretrain] epoch 6/120 loader=1/1 batch=60/156 avg_loss=2.8883
+[pretrain] epoch 6/120 loader=1/1 batch=70/156 avg_loss=2.8901
+[pretrain] epoch 6/120 loader=1/1 batch=80/156 avg_loss=2.8908
+[pretrain] epoch 6/120 loader=1/1 batch=90/156 avg_loss=2.8897
+[pretrain] epoch 6/120 loader=1/1 batch=100/156 avg_loss=2.8906
+[pretrain] epoch 6/120 loader=1/1 batch=110/156 avg_loss=2.8904
+[pretrain] epoch 6/120 loader=1/1 batch=120/156 avg_loss=2.8907
+[pretrain] epoch 6/120 loader=1/1 batch=130/156 avg_loss=2.8908
+[pretrain] epoch 6/120 loader=1/1 batch=140/156 avg_loss=2.8907
+[pretrain] epoch 6/120 loader=1/1 batch=150/156 avg_loss=2.8910
+Saving model at 5 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon5.pt
+Train Loss     : 2.8908
+[pretrain] epoch 6/120 train_loss=2.8908
+[pretrain_sparsity] epoch 5 input_sparsity=0.4569 spike_sparsity=0.9727 spike_density=0.0273
+Val Loss     : 2.8899
+[pretrain] epoch 6/120 val_loss=2.8899 epoch_time=35.2s total=3.6m
+[pretrain] epoch 7/120 start
+
+Epoch : 6
+[pretrain] epoch 7/120 loader=1/1 batch=10/156 avg_loss=2.8917
+[pretrain] epoch 7/120 loader=1/1 batch=20/156 avg_loss=2.8955
+[pretrain] epoch 7/120 loader=1/1 batch=30/156 avg_loss=2.8968
+[pretrain] epoch 7/120 loader=1/1 batch=40/156 avg_loss=2.8929
+[pretrain] epoch 7/120 loader=1/1 batch=50/156 avg_loss=2.8924
+[pretrain] epoch 7/120 loader=1/1 batch=60/156 avg_loss=2.8926
+[pretrain] epoch 7/120 loader=1/1 batch=70/156 avg_loss=2.8923
+[pretrain] epoch 7/120 loader=1/1 batch=80/156 avg_loss=2.8921
+[pretrain] epoch 7/120 loader=1/1 batch=90/156 avg_loss=2.8911
+[pretrain] epoch 7/120 loader=1/1 batch=100/156 avg_loss=2.8905
+[pretrain] epoch 7/120 loader=1/1 batch=110/156 avg_loss=2.8904
+[pretrain] epoch 7/120 loader=1/1 batch=120/156 avg_loss=2.8901
+[pretrain] epoch 7/120 loader=1/1 batch=130/156 avg_loss=2.8903
+[pretrain] epoch 7/120 loader=1/1 batch=140/156 avg_loss=2.8907
+[pretrain] epoch 7/120 loader=1/1 batch=150/156 avg_loss=2.8901
+Saving model at 6 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon6.pt
+Train Loss     : 2.8902
+[pretrain] epoch 7/120 train_loss=2.8902
+[pretrain_sparsity] epoch 6 input_sparsity=0.4568 spike_sparsity=0.9727 spike_density=0.0273
+Val Loss     : 2.8899
+[pretrain] epoch 7/120 val_loss=2.8899 epoch_time=35.2s total=4.1m
+[pretrain] epoch 8/120 start
+
+Epoch : 7
+[pretrain] epoch 8/120 loader=1/1 batch=10/156 avg_loss=2.8835
+[pretrain] epoch 8/120 loader=1/1 batch=20/156 avg_loss=2.8849
+[pretrain] epoch 8/120 loader=1/1 batch=30/156 avg_loss=2.8907
+[pretrain] epoch 8/120 loader=1/1 batch=40/156 avg_loss=2.8901
+[pretrain] epoch 8/120 loader=1/1 batch=50/156 avg_loss=2.8894
+[pretrain] epoch 8/120 loader=1/1 batch=60/156 avg_loss=2.8916
+[pretrain] epoch 8/120 loader=1/1 batch=70/156 avg_loss=2.8927
+[pretrain] epoch 8/120 loader=1/1 batch=80/156 avg_loss=2.8931
+[pretrain] epoch 8/120 loader=1/1 batch=90/156 avg_loss=2.8939
+[pretrain] epoch 8/120 loader=1/1 batch=100/156 avg_loss=2.8936
+[pretrain] epoch 8/120 loader=1/1 batch=110/156 avg_loss=2.8939
+[pretrain] epoch 8/120 loader=1/1 batch=120/156 avg_loss=2.8932
+[pretrain] epoch 8/120 loader=1/1 batch=130/156 avg_loss=2.8934
+[pretrain] epoch 8/120 loader=1/1 batch=140/156 avg_loss=2.8938
+[pretrain] epoch 8/120 loader=1/1 batch=150/156 avg_loss=2.8933
+Saving model at 7 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon7.pt
+Train Loss     : 2.8929
+[pretrain] epoch 8/120 train_loss=2.8929
+[pretrain_sparsity] epoch 7 input_sparsity=0.4569 spike_sparsity=0.9724 spike_density=0.0276
+Val Loss     : 2.8899
+[pretrain] epoch 8/120 val_loss=2.8899 epoch_time=35.2s total=4.7m
+[pretrain] epoch 9/120 start
+
+Epoch : 8
+[pretrain] epoch 9/120 loader=1/1 batch=10/156 avg_loss=2.8788
+[pretrain] epoch 9/120 loader=1/1 batch=20/156 avg_loss=2.8893
+[pretrain] epoch 9/120 loader=1/1 batch=30/156 avg_loss=2.8911
+[pretrain] epoch 9/120 loader=1/1 batch=40/156 avg_loss=2.8929
+[pretrain] epoch 9/120 loader=1/1 batch=50/156 avg_loss=2.8943
+[pretrain] epoch 9/120 loader=1/1 batch=60/156 avg_loss=2.8948
+[pretrain] epoch 9/120 loader=1/1 batch=70/156 avg_loss=2.8949
+[pretrain] epoch 9/120 loader=1/1 batch=80/156 avg_loss=2.8958
+[pretrain] epoch 9/120 loader=1/1 batch=90/156 avg_loss=2.8946
+[pretrain] epoch 9/120 loader=1/1 batch=100/156 avg_loss=2.8924
+[pretrain] epoch 9/120 loader=1/1 batch=110/156 avg_loss=2.8926
+[pretrain] epoch 9/120 loader=1/1 batch=120/156 avg_loss=2.8924
+[pretrain] epoch 9/120 loader=1/1 batch=130/156 avg_loss=2.8928
+[pretrain] epoch 9/120 loader=1/1 batch=140/156 avg_loss=2.8925
+[pretrain] epoch 9/120 loader=1/1 batch=150/156 avg_loss=2.8925
+Saving model at 8 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon8.pt
+Train Loss     : 2.8917
+[pretrain] epoch 9/120 train_loss=2.8917
+[pretrain_sparsity] epoch 8 input_sparsity=0.4568 spike_sparsity=0.9721 spike_density=0.0279
+Val Loss     : 2.8899
+[pretrain] epoch 9/120 val_loss=2.8899 epoch_time=35.0s total=5.3m
+[pretrain] epoch 10/120 start
+
+Epoch : 9
+[pretrain] epoch 10/120 loader=1/1 batch=10/156 avg_loss=2.8841
+[pretrain] epoch 10/120 loader=1/1 batch=20/156 avg_loss=2.8843
+[pretrain] epoch 10/120 loader=1/1 batch=30/156 avg_loss=2.8874
+[pretrain] epoch 10/120 loader=1/1 batch=40/156 avg_loss=2.8896
+[pretrain] epoch 10/120 loader=1/1 batch=50/156 avg_loss=2.8891
+[pretrain] epoch 10/120 loader=1/1 batch=60/156 avg_loss=2.8880
+[pretrain] epoch 10/120 loader=1/1 batch=70/156 avg_loss=2.8894
+[pretrain] epoch 10/120 loader=1/1 batch=80/156 avg_loss=2.8882
+[pretrain] epoch 10/120 loader=1/1 batch=90/156 avg_loss=2.8888
+[pretrain] epoch 10/120 loader=1/1 batch=100/156 avg_loss=2.8886
+[pretrain] epoch 10/120 loader=1/1 batch=110/156 avg_loss=2.8885
+[pretrain] epoch 10/120 loader=1/1 batch=120/156 avg_loss=2.8886
+[pretrain] epoch 10/120 loader=1/1 batch=130/156 avg_loss=2.8879
+[pretrain] epoch 10/120 loader=1/1 batch=140/156 avg_loss=2.8888
+[pretrain] epoch 10/120 loader=1/1 batch=150/156 avg_loss=2.8889
+Saving model at 9 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon9.pt
+Train Loss     : 2.8896
+[pretrain] epoch 10/120 train_loss=2.8896
+[pretrain_sparsity] epoch 9 input_sparsity=0.4571 spike_sparsity=0.9720 spike_density=0.0280
+Val Loss     : 2.8899
+[pretrain] epoch 10/120 val_loss=2.8899 epoch_time=35.1s total=5.9m
+[pretrain] epoch 11/120 start
+
+Epoch : 10
+[pretrain] epoch 11/120 loader=1/1 batch=10/156 avg_loss=2.8972
+[pretrain] epoch 11/120 loader=1/1 batch=20/156 avg_loss=2.8969
+[pretrain] epoch 11/120 loader=1/1 batch=30/156 avg_loss=2.8960
+[pretrain] epoch 11/120 loader=1/1 batch=40/156 avg_loss=2.8949
+[pretrain] epoch 11/120 loader=1/1 batch=50/156 avg_loss=2.8937
+[pretrain] epoch 11/120 loader=1/1 batch=60/156 avg_loss=2.8934
+[pretrain] epoch 11/120 loader=1/1 batch=70/156 avg_loss=2.8935
+[pretrain] epoch 11/120 loader=1/1 batch=80/156 avg_loss=2.8937
+[pretrain] epoch 11/120 loader=1/1 batch=90/156 avg_loss=2.8929
+[pretrain] epoch 11/120 loader=1/1 batch=100/156 avg_loss=2.8924
+[pretrain] epoch 11/120 loader=1/1 batch=110/156 avg_loss=2.8922
+[pretrain] epoch 11/120 loader=1/1 batch=120/156 avg_loss=2.8920
+[pretrain] epoch 11/120 loader=1/1 batch=130/156 avg_loss=2.8912
+[pretrain] epoch 11/120 loader=1/1 batch=140/156 avg_loss=2.8915
+[pretrain] epoch 11/120 loader=1/1 batch=150/156 avg_loss=2.8912
+Saving model at 10 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon10.pt
+Train Loss     : 2.8913
+[pretrain] epoch 11/120 train_loss=2.8913
+[pretrain_sparsity] epoch 10 input_sparsity=0.4568 spike_sparsity=0.9720 spike_density=0.0280
+Val Loss     : 2.8899
+[pretrain] epoch 11/120 val_loss=2.8899 epoch_time=34.9s total=6.5m
+[pretrain] epoch 12/120 start
+
+Epoch : 11
+[pretrain] epoch 12/120 loader=1/1 batch=10/156 avg_loss=2.8933
+[pretrain] epoch 12/120 loader=1/1 batch=20/156 avg_loss=2.8935
+[pretrain] epoch 12/120 loader=1/1 batch=30/156 avg_loss=2.8935
+[pretrain] epoch 12/120 loader=1/1 batch=40/156 avg_loss=2.8931
+[pretrain] epoch 12/120 loader=1/1 batch=50/156 avg_loss=2.8935
+[pretrain] epoch 12/120 loader=1/1 batch=60/156 avg_loss=2.8919
+[pretrain] epoch 12/120 loader=1/1 batch=70/156 avg_loss=2.8906
+[pretrain] epoch 12/120 loader=1/1 batch=80/156 avg_loss=2.8907
+[pretrain] epoch 12/120 loader=1/1 batch=90/156 avg_loss=2.8908
+[pretrain] epoch 12/120 loader=1/1 batch=100/156 avg_loss=2.8899
+[pretrain] epoch 12/120 loader=1/1 batch=110/156 avg_loss=2.8891
+[pretrain] epoch 12/120 loader=1/1 batch=120/156 avg_loss=2.8887
+[pretrain] epoch 12/120 loader=1/1 batch=130/156 avg_loss=2.8890
+[pretrain] epoch 12/120 loader=1/1 batch=140/156 avg_loss=2.8893
+[pretrain] epoch 12/120 loader=1/1 batch=150/156 avg_loss=2.8900
+Saving model at 11 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon11.pt
+Train Loss     : 2.8893
+[pretrain] epoch 12/120 train_loss=2.8893
+[pretrain_sparsity] epoch 11 input_sparsity=0.4571 spike_sparsity=0.9718 spike_density=0.0282
+Val Loss     : 2.8899
+[pretrain] epoch 12/120 val_loss=2.8899 epoch_time=35.1s total=7.1m
+[pretrain] epoch 13/120 start
+
+Epoch : 12
+[pretrain] epoch 13/120 loader=1/1 batch=10/156 avg_loss=2.8902
+[pretrain] epoch 13/120 loader=1/1 batch=20/156 avg_loss=2.8952
+[pretrain] epoch 13/120 loader=1/1 batch=30/156 avg_loss=2.8955
+[pretrain] epoch 13/120 loader=1/1 batch=40/156 avg_loss=2.8955
+[pretrain] epoch 13/120 loader=1/1 batch=50/156 avg_loss=2.8944
+[pretrain] epoch 13/120 loader=1/1 batch=60/156 avg_loss=2.8957
+[pretrain] epoch 13/120 loader=1/1 batch=70/156 avg_loss=2.8956
+[pretrain] epoch 13/120 loader=1/1 batch=80/156 avg_loss=2.8963
+[pretrain] epoch 13/120 loader=1/1 batch=90/156 avg_loss=2.8954
+[pretrain] epoch 13/120 loader=1/1 batch=100/156 avg_loss=2.8956
+[pretrain] epoch 13/120 loader=1/1 batch=110/156 avg_loss=2.8946
+[pretrain] epoch 13/120 loader=1/1 batch=120/156 avg_loss=2.8951
+[pretrain] epoch 13/120 loader=1/1 batch=130/156 avg_loss=2.8944
+[pretrain] epoch 13/120 loader=1/1 batch=140/156 avg_loss=2.8938
+[pretrain] epoch 13/120 loader=1/1 batch=150/156 avg_loss=2.8936
+Saving model at 12 epoch to results/pretrain_try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon12.pt
+Train Loss     : 2.8936
+[pretrain] epoch 13/120 train_loss=2.8936
+[pretrain_sparsity] epoch 12 input_sparsity=0.4566 spike_sparsity=0.9718 spike_density=0.0282
+Val Loss     : 2.8899
+[pretrain] epoch 13/120 val_loss=2.8899 epoch_time=35.3s total=7.6m
+Early stopping pretrain at epoch 12 (patience=12, best_val_loss=2.8899)
+Test Loss     : 2.8883
+[pretrain_test_sparsity] input_sparsity=0.4559 spike_sparsity=0.9706 spike_density=0.0294

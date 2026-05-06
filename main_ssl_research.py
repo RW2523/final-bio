@@ -67,8 +67,8 @@ _maybe_add_argument(
     "--bio_filter_mode",
     type=str,
     default="raw",
-    choices=["raw", "motion", "gravity", "motion_gravity"],
-    help="research preprocessing mode: raw stream, motion-focused body signal, gravity-focused acceleration, or concatenated motion+gravity features",
+    choices=["raw", "motion", "gravity", "motion_gravity", "motion_gravity_accel"],
+    help="research preprocessing mode: raw stream, motion-focused body signal, gravity-focused acceleration, concatenated motion+gravity+gyro features, or accel-only motion+gravity features",
 )
 _maybe_add_argument("--bio_gravity_cutoff_hz", type=float, default=0.25, help="low-pass cutoff used to estimate gravity from accelerometer channels")
 _maybe_add_argument("--bio_motion_low_hz", type=float, default=0.25, help="low cutoff for motion-focused band-pass filtering")
@@ -77,6 +77,39 @@ _maybe_add_argument("--encoding_norm_eps", type=float, default=1e-6, help="epsil
 _maybe_add_argument("--sf_threshold", type=float, default=0.15, help="threshold for step-forward temporal encoding after per-sample max-abs normalization")
 _maybe_add_argument("--mw_window", type=int, default=8, help="history window length for moving-window temporal encoding")
 _maybe_add_argument("--mw_threshold", type=float, default=0.15, help="threshold for moving-window temporal encoding after per-sample max-abs normalization")
+_maybe_add_argument(
+    "--lincls_loss",
+    type=str,
+    default="cb_focal",
+    choices=["ce", "focal", "cb_focal"],
+    help="downstream classification loss; cb_focal is the research default for improving F1 on imbalanced classes",
+)
+_maybe_add_argument("--focal_gamma", type=float, default=2.0, help="gamma for focal-style downstream losses")
+_maybe_add_argument("--cb_beta", type=float, default=0.999, help="effective-number beta for class-balanced focal loss")
+_maybe_add_argument(
+    "--snn_tf_channel_gate",
+    type=str,
+    default="se",
+    choices=["none", "se"],
+    help="optional sensor-channel reweighting before the SNN transformer",
+)
+_maybe_add_argument("--snn_tf_gate_reduction", type=int, default=4, help="reduction ratio for the sensor-channel gate MLP")
+_maybe_add_argument("--ispf_common_thr", type=float, default=1.0, help="shared spiking threshold for iSpikformer / SNN_Transformer nodes")
+_maybe_add_argument("--ispf_tau", type=float, default=2.0, help="membrane time constant for iSpikformer / SNN_Transformer nodes")
+_maybe_add_argument("--ispf_detach_reset", type=int, default=1, help="whether to detach reset in iSpikformer / SNN_Transformer nodes (1=yes, 0=no)")
+_maybe_add_argument("--report_sparsity", action="store_true", help="report encoded-input and internal spike sparsity during training and test")
+parser.set_defaults(report_sparsity=True)
+_maybe_add_argument("--sparsity_eps", type=float, default=1e-8, help="absolute tolerance used when counting zeros for sparsity metrics")
+
+# F1-oriented linear-head defaults for research runs.
+parser.set_defaults(
+    lincls_scheduler="onecycle",
+    lincls_grad_clip=1.0,
+    lincls_select_metric="macrof1",
+    lincls_calibrate_temperature=True,
+    lincls_label_smoothing=0.05,
+    lincls_logit_adjust_tau=0.25,
+)
 
 
 if __name__ == "__main__":
@@ -96,7 +129,11 @@ if __name__ == "__main__":
     for r in range(args.rep):
         _base_main.seed_all(seed=1000 + r)
         train_loaders, val_loader, test_loader = setup_dataloaders(args)
-        model, optimizers, schedulers, criterion, logger, fitlog, classifier, criterion_cls, optimizer_cls = setup(args, device)
+        model, optimizers, schedulers, criterion, logger, fitlog, classifier, criterion_cls, optimizer_cls = setup(
+            args,
+            device,
+            train_loaders=train_loaders,
+        )
 
         if not args.eval:
             ssl_ckpt = str(getattr(args, "ssl_ckpt", "") or "").strip()

@@ -1,0 +1,2 @@
+/home/sriramkannan_umass_edu/690R-BioMarkers/final-bio/trainer.py:22: FutureWarning: In the future `np.str` will be defined as the corresponding NumPy scalar.
+  if not hasattr(np, 'str'):

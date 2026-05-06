@@ -40,6 +40,28 @@ class LIFSpike(nn.Module):
         raise ValueError("LIFSpike expects (B,C,T) or (B,C,H,W); got %s" % (tuple(x.shape),))
 
 
+class SensorChannelGate(nn.Module):
+    """
+    Lightweight squeeze-excitation gate for sensor channels on (B, T, C) inputs.
+    """
+
+    def __init__(self, n_channels: int, reduction: int = 4):
+        super().__init__()
+        hidden = max(1, int(n_channels) // max(1, int(reduction)))
+        self.pool = nn.AdaptiveAvgPool1d(1)
+        self.mlp = nn.Sequential(
+            nn.Linear(n_channels, hidden),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden, n_channels),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, x_btc: torch.Tensor):
+        pooled = self.pool(x_btc.transpose(1, 2)).squeeze(-1)
+        gate = self.mlp(pooled).unsqueeze(1)
+        return x_btc * gate
+
+
 class SFCN(FCN):
 
     def __init__(self, n_channels, n_classes, out_channels=128, backbone=True, len_sw=128, **kwargs):
@@ -215,12 +237,14 @@ class SNN_Transformer(nn.Module):
         num_steps: int = 4,
         encoder_type: str = "conv",
         d_ff=None,
+        common_thr: float | None = None,
+        detach_reset: bool = True,
+        channel_gate: str = "none",
+        gate_reduction: int = 4,
         **k,
     ):
         super().__init__()
         _ = k
-        _ = tau
-        _ = thresh
         _ = mlp_dim
         _ = dropout
         from models.seqsnn_ispikformer import SeqSNNiSpikformerBackbone
@@ -230,6 +254,13 @@ class SNN_Transformer(nn.Module):
                 "SNN_Transformer (iSpikformer) only supports backbone=True in SNN_HAR."
             )
         self.backbone = backbone
+        gate_mode = str(channel_gate).lower()
+        if gate_mode == "se":
+            self.channel_gate = SensorChannelGate(n_channels=n_channels, reduction=gate_reduction)
+        elif gate_mode == "none":
+            self.channel_gate = None
+        else:
+            raise ValueError(f"Unknown SNN transformer channel gate {channel_gate!r}; use none|se")
         self._core = SeqSNNiSpikformerBackbone(
             n_channels=n_channels,
             n_classes=n_classes,
@@ -240,11 +271,15 @@ class SNN_Transformer(nn.Module):
             depths=int(depth),
             num_steps=int(num_steps),
             heads=int(heads),
+            common_thr=float(common_thr if common_thr is not None else thresh),
+            tau=float(tau),
+            detach_reset=bool(detach_reset),
             encoder_type=str(encoder_type),
         )
         self.out_dim = self._core.out_dim
 
     def forward(self, x_btc: torch.Tensor):
+        if self.channel_gate is not None:
+            x_btc = self.channel_gate(x_btc)
         return self._core(x_btc)
-
 

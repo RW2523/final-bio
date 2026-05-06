@@ -3,13 +3,13 @@ import torch
 from torch import nn
 from spikingjelly.activation_based import surrogate, neuron
 
-tau = 2.0
 backend = "torch"
-detach_reset = True
+DEFAULT_TAU = 2.0
+DEFAULT_DETACH_RESET = True
 
 
 class RepeatEncoder(nn.Module):
-    def __init__(self, output_size: int):
+    def __init__(self, output_size: int, tau: float = DEFAULT_TAU, detach_reset: bool = DEFAULT_DETACH_RESET):
         super().__init__()
         self.out_size = output_size
         self.lif = neuron.LIFNode(
@@ -28,7 +28,7 @@ class RepeatEncoder(nn.Module):
 
 
 class DeltaEncoder(nn.Module):
-    def __init__(self, output_size: int):
+    def __init__(self, output_size: int, tau: float = DEFAULT_TAU, detach_reset: bool = DEFAULT_DETACH_RESET):
         super().__init__()
         self.norm = nn.BatchNorm2d(1)
         self.enc = nn.Linear(1, output_size)
@@ -51,7 +51,13 @@ class DeltaEncoder(nn.Module):
 
 
 class ConvEncoder(nn.Module):
-    def __init__(self, output_size: int, kernel_size: int = 3):
+    def __init__(
+        self,
+        output_size: int,
+        kernel_size: int = 3,
+        tau: float = DEFAULT_TAU,
+        detach_reset: bool = DEFAULT_DETACH_RESET,
+    ):
         super().__init__()
         self.encoder = nn.Sequential(
             nn.Conv2d(

@@ -12,7 +12,7 @@ WISDM_SHARED_DIR="/home/sriramkannan_umass_edu/690R-BioMarkers/wisdm-dataset"
 : "${BACKBONE:=SResNet1D}"
 : "${WISDM_DEVICE:=Watch}"
 : "${WISDM_FEAT:=raw}"
-: "${INPUT_ENCODING:=step_forward}"          # none | poisson_rate | step_forward | moving_window | legacy options
+: "${INPUT_ENCODING:=step_forward}"          # none | poisson_rate | step_forward | moving_window | hybrid_ds_rate | legacy options
 : "${BATCH_LOG_EVERY:=10}"
 : "${EXTRA_FLAGS:=}"
 
@@ -21,7 +21,7 @@ WISDM_SHARED_DIR="/home/sriramkannan_umass_edu/690R-BioMarkers/wisdm-dataset"
 : "${BIO_RESAMPLE_HZ:=30}"
 : "${BIO_WINDOW_SECONDS:=10}"
 : "${BIO_STRIDE_SECONDS:=5}"
-: "${BIO_FILTER_MODE:=motion_gravity}"       # raw | motion | gravity | motion_gravity
+: "${BIO_FILTER_MODE:=motion_gravity}"       # raw | motion | gravity | motion_gravity | motion_gravity_accel
 : "${BIO_GRAVITY_CUTOFF_HZ:=0.25}"
 : "${BIO_MOTION_LOW_HZ:=0.25}"
 : "${BIO_MOTION_HIGH_HZ:=15}"

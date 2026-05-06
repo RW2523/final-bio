@@ -106,6 +106,46 @@ parser.add_argument(
     help='lr for backbone params when finetuning during linear eval (head uses --lr_cls)',
 )
 parser.add_argument(
+    '--lincls_label_smoothing',
+    type=float,
+    default=0.0,
+    help='label smoothing for CE-based linear-head training (ignored by focal losses)',
+)
+parser.add_argument(
+    '--lincls_scheduler',
+    type=str,
+    default='cosine',
+    choices=['cosine', 'onecycle', 'none'],
+    help='scheduler for linear-head stage',
+)
+parser.add_argument(
+    '--lincls_grad_clip',
+    type=float,
+    default=0.0,
+    help='if >0, clip global grad norm during linear-head training',
+)
+parser.add_argument(
+    '--lincls_select_metric',
+    type=str,
+    default='loss',
+    choices=['loss', 'macrof1'],
+    help='best-checkpoint criterion for linear-head stage',
+)
+parser.add_argument(
+    '--lincls_logit_adjust_tau',
+    type=float,
+    default=0.0,
+    help='if >0, apply logit adjustment with class priors during linear-head train/eval',
+)
+parser.add_argument(
+    '--lincls_calibrate_temperature',
+    action='store_true',
+    help='sweep temperature on validation set after linear-head training to maximize macro-F1',
+)
+parser.add_argument('--lincls_temp_min', type=float, default=0.7, help='min temperature for calibration sweep')
+parser.add_argument('--lincls_temp_max', type=float, default=1.6, help='max temperature for calibration sweep')
+parser.add_argument('--lincls_temp_steps', type=int, default=10, help='number of temperature points in calibration sweep')
+parser.add_argument(
     '--early_stop_patience',
     type=int,
     default=0,

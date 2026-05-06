@@ -105,3 +105,47 @@ class SupConTwoViewLoss(torch.nn.Module):
         if not bool(has_pos.any()):
             return z1.new_tensor(0.0)
         return per_anchor[has_pos].mean()
+
+
+class FocalLoss(nn.Module):
+    """
+    Multi-class focal loss for imbalanced classification.
+    """
+
+    def __init__(self, gamma: float = 2.0, class_weight: torch.Tensor | None = None, reduction: str = "mean"):
+        super().__init__()
+        self.gamma = float(gamma)
+        self.reduction = str(reduction)
+        if class_weight is not None:
+            self.register_buffer("class_weight", class_weight.float())
+        else:
+            self.class_weight = None
+
+    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        log_prob = F.log_softmax(logits, dim=1)
+        prob = log_prob.exp()
+        log_pt = log_prob.gather(1, target.view(-1, 1)).squeeze(1)
+        pt = prob.gather(1, target.view(-1, 1)).squeeze(1).clamp_min(1e-8)
+        focal = torch.pow(1.0 - pt, self.gamma)
+        loss = -focal * log_pt
+        if self.class_weight is not None:
+            loss = loss * self.class_weight[target]
+        if self.reduction == "sum":
+            return loss.sum()
+        if self.reduction == "none":
+            return loss
+        return loss.mean()
+
+
+class ClassBalancedFocalLoss(FocalLoss):
+    """
+    Focal loss with class-balanced weights from the effective-number heuristic.
+    """
+
+    def __init__(self, class_counts, beta: float = 0.999, gamma: float = 2.0, reduction: str = "mean"):
+        counts = torch.as_tensor(class_counts, dtype=torch.float32)
+        beta = float(beta)
+        effective_num = 1.0 - torch.pow(torch.full_like(counts, beta), counts.clamp_min(1.0))
+        weights = (1.0 - beta) / effective_num.clamp_min(1e-8)
+        weights = weights / weights.mean().clamp_min(1e-8)
+        super().__init__(gamma=gamma, class_weight=weights, reduction=reduction)

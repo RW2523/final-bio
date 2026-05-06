@@ -1,0 +1,66 @@
+/home/sriramkannan_umass_edu/690R-BioMarkers/final-bio/trainer.py:22: FutureWarning: In the future `np.str` will be defined as the corresponding NumPy scalar.
+  if not hasattr(np, 'str'):
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Namespace(cuda=0, rep=1, eval=False, cleanup_checkpoints=False, dataset='wisdm', cases='random', split_ratio=0.2, target_domain='1600', device='Watch', n_feature=9, len_sw=300, n_class=18, wisdm_feat='raw', wisdm_top_k_classes=0, wisdm_data_dir='/home/sriramkannan_umass_edu/690R-BioMarkers/wisdm-dataset', wisdm_fused12=False, batch_size=128, n_epoch=120, pretrain_epochs=120, lincls_epochs=120, lr=0.001, lr_cls=0.0015, lincls_head='linear', lincls_hidden_dim=512, lincls_hidden_dim2=256, lincls_dropout=0.2, lincls_finetune_backbone=True, lincls_finetune_scope='last_block', lincls_backbone_lr=0.0002, lincls_label_smoothing=0.05, lincls_scheduler='onecycle', lincls_grad_clip=1.0, lincls_select_metric='macrof1', lincls_logit_adjust_tau=0.25, lincls_calibrate_temperature=True, lincls_temp_min=0.7, lincls_temp_max=1.8, lincls_temp_steps=12, early_stop_patience=12, early_stop_min_delta=0.02, scheduler=True, logdir='log/', batch_log_every=10, framework='simclr', backbone='SNN_Transformer', dcl_conv_kernels=64, dcl_kernel_size=5, dcl_lstm_units=128, ispf_dim=512, ispf_d_ff=0, ispf_depths=2, ispf_num_steps=4, ispf_heads=8, ispf_encoder='conv', spk_tf_dim=256, spk_tf_depth=4, spk_tf_heads=8, spk_tf_mlp_ratio=4.0, spk_tf_dropout=0.1, spk_tf_attn_dropout=0.1, spk_tf_spike_threshold=0.5, vit_patch_size=20, vit_dim=128, vit_depth=4, vit_heads=4, vit_mlp_dim=256, vit_dropout=0.1, criterion='NTXent', aug1='jit_scal', aug2='perm_jit', p=128, phid=128, EMA=0.996, lr_mul=1.0, weight_decay=1e-06, temp_unit='tsfm', mmb_size=1024, lambda1=1.0, lambda2=1.0, tau=0.75, thresh=0.5, input_encoding='hybrid_ds_rate', zcsf_step=0.1, arima_diff_order=1, arima_eps=1e-06, skip_pretrain=False, ssl_ckpt='', ssl_ckpt_strict=False, use_augpred=False, augpred_lambda=0.5, augpred_transforms='na,t_flip,perm,t_warp,jit_scal,noise,scale,rotation', simclr_contrastive='supcon', supcon_temperature=0.07, bio_source_hz=20.0, bio_resample_hz=30.0, bio_window_seconds=10.0, bio_stride_seconds=5.0, bio_filter_mode='motion_gravity', bio_gravity_cutoff_hz=0.25, bio_motion_low_hz=0.25, bio_motion_high_hz=15.0, encoding_norm_eps=1e-06, sf_threshold=0.15, mw_window=8, mw_threshold=0.15, lincls_loss='ce', focal_gamma=2.0, cb_beta=0.999, snn_tf_channel_gate='se', snn_tf_gate_reduction=4, ispf_common_thr=1.0, ispf_tau=2.0, ispf_detach_reset=1, report_sparsity=True, sparsity_eps=1e-08, model_name='try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon')
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 0
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8914
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 1
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8939
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 2
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8913
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 3
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8922
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 4
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8908
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 5
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8908
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 6
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8902
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 7
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8929
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 8
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8917
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 9
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8896
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 10
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8913
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 11
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8893
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:
+Epoch : 12
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Train Loss     : 2.8936
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Val Loss     : 2.8899
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Early stopping pretrain at epoch 12 (patience=12, best_val_loss=2.8899)
+DEBUG:log/try_scheduler_simclr_pretrain_wisdm_eps120_lr0.001_bs128_aug1jit_scal_aug2perm_jit_dim-pdim128-128_EMA0.996_criterion_NTXent_lambda1_1.0_lambda2_1.0_tempunit_tsfm_sclr_supcon.log:Test Loss     : 2.8883
+Traceback (most recent call last):
+  File "/home/sriramkannan_umass_edu/690R-BioMarkers/final-bio/main_ssl_research.py", line 184, in <module>
+    best_lincls = train_lincls(
+                  ^^^^^^^^^^^^^
+  File "/home/sriramkannan_umass_edu/690R-BioMarkers/final-bio/trainer.py", line 1043, in train_lincls
+    _apply_lincls_finetune_settings(trained_backbone, args)
+  File "/home/sriramkannan_umass_edu/690R-BioMarkers/final-bio/trainer.py", line 979, in _apply_lincls_finetune_settings
+    raise ValueError(
+ValueError: --lincls_finetune_backbone is not supported for backbone=SNN_Transformer yet. Use SFCN/FCN/SResNet1D/ViT1D/SeqSNNiSpikformerBackbone, or extend _apply_lincls_finetune_settings().

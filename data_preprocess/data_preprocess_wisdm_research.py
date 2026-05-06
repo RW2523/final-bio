@@ -29,6 +29,8 @@ def estimate_n_feature(args) -> int:
     filter_mode = str(getattr(args, "bio_filter_mode", "raw")).lower()
     if filter_mode == "motion_gravity":
         return 9
+    if filter_mode == "motion_gravity_accel":
+        return 6
     return 6
 
 
@@ -100,6 +102,9 @@ def _apply_research_preproc(arr: np.ndarray, args) -> np.ndarray:
         return np.concatenate([gravity, gyr], axis=1).astype(np.float32, copy=False)
     if filter_mode == "motion_gravity":
         return np.concatenate([motion_acc, gravity, motion_gyr], axis=1).astype(np.float32, copy=False)
+    if filter_mode == "motion_gravity_accel":
+        # 6-channel accel-only variant: body motion acceleration + gravity acceleration.
+        return np.concatenate([motion_acc, gravity], axis=1).astype(np.float32, copy=False)
 
     raise ValueError(f"Unsupported --bio_filter_mode '{filter_mode}'")
 

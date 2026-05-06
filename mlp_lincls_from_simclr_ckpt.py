@@ -250,7 +250,10 @@ def main() -> None:
     )
 
     # Reload best head weights for reporting (matches main_ssl.py flow)
-    classifier.load_state_dict(best_head)
+    if isinstance(best_head, dict) and "state_dict" in best_head:
+        classifier.load_state_dict(best_head["state_dict"])
+    else:
+        classifier.load_state_dict(best_head)
     test_acc, miF, maF, macroF = test_lincls(
         test_loader,
         trained_backbone,
@@ -267,7 +270,8 @@ def main() -> None:
     if not out_path:
         os.makedirs("results", exist_ok=True)
         out_path = os.path.join("results", f"lincls_mlp_from_ckpt_{ts}.pt")
-    torch.save({"classifier_state_dict": best_head, "args": vars(args)}, out_path)
+    to_save = best_head["state_dict"] if isinstance(best_head, dict) and "state_dict" in best_head else best_head
+    torch.save({"classifier_state_dict": to_save, "lincls_payload": best_head, "args": vars(args)}, out_path)
     print(f"Final Test Acc: {test_acc:.4f}")
     print(f"Final miF: {miF:.4f}")
     print(f"Final maF (weighted F1): {maF:.4f}")

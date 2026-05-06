@@ -13,12 +13,6 @@ from models.resnet1d import SResNet1D
 from models.vit1d import ViT1D
 from models.loss import *
 from models.spike import *
-from data_preprocess import data_preprocess_ucihar
-from data_preprocess import data_preprocess_shar
-from data_preprocess import data_preprocess_hhar
-from data_preprocess import data_preprocess_wisdm
-from wisdm12_ssl.preprocess_wisdm12 import prep_wisdm_fused12
-
 from sklearn.metrics import f1_score
 import seaborn as sns
 import fitlog
@@ -42,6 +36,157 @@ augpred_classifier = None
 augpred_optimizer = None
 augpred_criterion = None
 augpred_transforms = []
+
+
+def _tensor_zero_fraction(x, eps: float = 1e-8):
+    x = x.detach()
+    if not torch.is_floating_point(x):
+        x = x.float()
+    return float((x.abs() <= eps).sum().item()), int(x.numel())
+
+
+class SparsityTracker:
+    """
+    Tracks encoded-input sparsity and internal spike sparsity via forward hooks.
+    """
+
+    def __init__(self, module, enabled: bool = True, eps: float = 1e-8):
+        self.enabled = bool(enabled)
+        self.eps = float(eps)
+        self.handles = []
+        self.reset()
+        if self.enabled and module is not None:
+            self._register(module)
+
+    def reset(self):
+        self.input_zero = 0.0
+        self.input_total = 0
+        self.spike_zero = 0.0
+        self.spike_total = 0
+
+    def close(self):
+        for handle in self.handles:
+            handle.remove()
+        self.handles.clear()
+
+    def observe_input(self, x):
+        if not self.enabled or not isinstance(x, torch.Tensor):
+            return
+        zero, total = _tensor_zero_fraction(x, eps=self.eps)
+        self.input_zero += zero
+        self.input_total += total
+
+    def summary(self):
+        if not self.enabled:
+            return {}
+        out = {}
+        if self.input_total > 0:
+            out["input_sparsity"] = self.input_zero / self.input_total
+        if self.spike_total > 0:
+            spike_sparsity = self.spike_zero / self.spike_total
+            out["spike_sparsity"] = spike_sparsity
+            out["spike_density"] = 1.0 - spike_sparsity
+        return out
+
+    def _register(self, module):
+        for submodule in module.modules():
+            name = submodule.__class__.__name__.lower()
+            if "lif" not in name and "node" not in name:
+                continue
+            self.handles.append(submodule.register_forward_hook(self._hook))
+
+    def _hook(self, module, inputs, output):
+        if not self.enabled:
+            return
+        self._accumulate(output)
+
+    def _accumulate(self, output):
+        if isinstance(output, torch.Tensor):
+            zero, total = _tensor_zero_fraction(output, eps=self.eps)
+            self.spike_zero += zero
+            self.spike_total += total
+            return
+        if isinstance(output, (tuple, list)):
+            for item in output:
+                self._accumulate(item)
+
+
+def _collect_train_labels(train_loaders):
+    labels = []
+    for loader in train_loaders:
+        dataset = getattr(loader, "dataset", None)
+        if dataset is None:
+            continue
+        cur = getattr(dataset, "labels", None)
+        if cur is None:
+            continue
+        cur = np.asarray(cur).reshape(-1)
+        if cur.size > 0:
+            labels.append(cur.astype(np.int64, copy=False))
+    if not labels:
+        return None
+    return np.concatenate(labels, axis=0)
+
+
+def _compute_class_counts(train_loaders, n_class):
+    labels = _collect_train_labels(train_loaders)
+    if labels is None:
+        return None
+    counts = np.bincount(labels, minlength=int(n_class)).astype(np.int64, copy=False)
+    counts[counts <= 0] = 1
+    return counts
+
+
+def _compute_class_log_prior(train_loaders, n_class, device):
+    counts = _compute_class_counts(train_loaders, n_class)
+    if counts is None:
+        return None
+    prior = torch.as_tensor(counts, dtype=torch.float32, device=device)
+    prior = prior / prior.sum().clamp_min(1.0)
+    return torch.log(prior.clamp_min(1e-8))
+
+
+def _build_lincls_criterion(args, train_loaders, device):
+    loss_name = str(getattr(args, "lincls_loss", "ce")).lower()
+    label_smoothing = float(getattr(args, "lincls_label_smoothing", 0.0))
+    if label_smoothing < 0.0 or label_smoothing >= 1.0:
+        raise ValueError(f"--lincls_label_smoothing must be in [0,1), got {label_smoothing}")
+    if loss_name == "ce":
+        return nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+
+    class_counts = _compute_class_counts(train_loaders, args.n_class)
+    gamma = float(getattr(args, "focal_gamma", 2.0))
+    if loss_name == "focal":
+        class_weight = None
+        if class_counts is not None:
+            weight = torch.as_tensor(class_counts, dtype=torch.float32, device=device)
+            class_weight = (weight.sum() / weight.clamp_min(1.0))
+            class_weight = class_weight / class_weight.mean().clamp_min(1e-8)
+        if class_weight is not None:
+            return FocalLoss(gamma=gamma, class_weight=class_weight).to(device)
+        return FocalLoss(gamma=gamma).to(device)
+    if loss_name in ["cb_focal", "class_balanced_focal"]:
+        if class_counts is None:
+            return FocalLoss(gamma=gamma).to(device)
+        beta = float(getattr(args, "cb_beta", 0.999))
+        return ClassBalancedFocalLoss(class_counts=class_counts, beta=beta, gamma=gamma).to(device)
+    raise ValueError(f"Unknown --lincls_loss {loss_name!r}; use ce|focal|cb_focal")
+
+
+def _log_sparsity(tag, tracker, epoch=None, fitlog=None):
+    stats = tracker.summary()
+    if not stats:
+        return
+    prefix = f"[{tag}]"
+    if epoch is not None:
+        prefix = f"{prefix} epoch {epoch}"
+    text = prefix + " " + " ".join(f"{k}={v:.4f}" for k, v in stats.items())
+    print(text)
+    if fitlog is not None and epoch is not None:
+        for key, value in stats.items():
+            fitlog.add_metric({"dev": {f"{tag}_{key}": value}}, step=epoch)
+    elif fitlog is not None:
+        fitlog.add_best_metric({"dev": {f"{tag}_{key}": value for key, value in stats.items()}})
 
 
 def apply_input_encoding(sample, args):
@@ -121,6 +266,8 @@ def apply_input_encoding(sample, args):
 
 def setup_dataloaders(args):
     if args.dataset == 'ucihar':
+        from data_preprocess import data_preprocess_ucihar
+
         args.n_feature = 9
         args.len_sw = 128
         args.n_class = 6
@@ -128,6 +275,8 @@ def setup_dataloaders(args):
             args.target_domain == '0'
         train_loaders, val_loader, test_loader = data_preprocess_ucihar.prep_ucihar(args, SLIDING_WINDOW_LEN=args.len_sw, SLIDING_WINDOW_STEP=int( args.len_sw * 0.5))
     if args.dataset == 'shar':
+        from data_preprocess import data_preprocess_shar
+
         args.n_feature = 3
         args.len_sw = 151
         args.n_class = 17
@@ -135,6 +284,8 @@ def setup_dataloaders(args):
             args.target_domain == '1'
         train_loaders, val_loader, test_loader = data_preprocess_shar.prep_shar(args, SLIDING_WINDOW_LEN=args.len_sw, SLIDING_WINDOW_STEP=int(args.len_sw * 0.5))
     if args.dataset == 'hhar':
+        from data_preprocess import data_preprocess_hhar
+
         args.n_feature = 6
         args.len_sw = 100
         args.n_class = 6
@@ -145,6 +296,9 @@ def setup_dataloaders(args):
                                                                                 train_user=source_domain,
                                                                                 test_user=args.target_domain)
     if args.dataset == 'wisdm':
+        from data_preprocess import data_preprocess_wisdm
+        from wisdm12_ssl.preprocess_wisdm12 import prep_wisdm_fused12
+
         if bool(getattr(args, 'wisdm_fused12', False)):
             # Fused setup mirrors requested bio-style defaults:
             #   sample rate=20Hz, window=10s (200), stride=5s (100), channels=12.
@@ -253,7 +407,27 @@ def setup_model_optm(args, DEVICE, classifier=True):
     elif args.backbone in ('CNN_AE', 'SNN_CNN_AE'):
         backbone = SNN_CNN_AE(n_channels=args.n_feature, n_classes=args.n_class, out_channels=128, backbone=True, **snn_params)
     elif args.backbone in ('Transformer', 'SNN_Transformer'):
-        backbone = SNN_Transformer(n_channels=args.n_feature, len_sw=args.len_sw, n_classes=args.n_class, dim=128, depth=4, heads=4, mlp_dim=64, dropout=0.1, backbone=True, **snn_params)
+        tf_d_ff = int(getattr(args, 'ispf_d_ff', 0)) or None
+        backbone = SNN_Transformer(
+            n_channels=args.n_feature,
+            len_sw=args.len_sw,
+            n_classes=args.n_class,
+            dim=int(getattr(args, 'ispf_dim', 512)),
+            depth=int(getattr(args, 'ispf_depths', 2)),
+            heads=int(getattr(args, 'ispf_heads', 8)),
+            mlp_dim=64,
+            dropout=0.1,
+            backbone=True,
+            num_steps=int(getattr(args, 'ispf_num_steps', 4)),
+            encoder_type=str(getattr(args, 'ispf_encoder', 'conv')),
+            d_ff=tf_d_ff,
+            common_thr=float(getattr(args, 'ispf_common_thr', 1.0)),
+            detach_reset=bool(int(getattr(args, 'ispf_detach_reset', 1))),
+            channel_gate=str(getattr(args, 'snn_tf_channel_gate', 'none')),
+            gate_reduction=int(getattr(args, 'snn_tf_gate_reduction', 4)),
+            tau=float(getattr(args, 'ispf_tau', getattr(args, 'tau', 2.0))),
+            thresh=float(getattr(args, 'thresh', 0.5)),
+        )
     elif args.backbone == 'iSpikformer':
         from models.seqsnn_ispikformer import SeqSNNiSpikformerBackbone
 
@@ -267,6 +441,9 @@ def setup_model_optm(args, DEVICE, classifier=True):
             depths=int(getattr(args, 'ispf_depths', 2)),
             num_steps=int(getattr(args, 'ispf_num_steps', 4)),
             heads=int(getattr(args, 'ispf_heads', 8)),
+            common_thr=float(getattr(args, 'ispf_common_thr', 1.0)),
+            tau=float(getattr(args, 'ispf_tau', getattr(args, 'tau', 2.0))),
+            detach_reset=bool(int(getattr(args, 'ispf_detach_reset', 1))),
             encoder_type=str(getattr(args, 'ispf_encoder', 'conv')),
         )
     elif args.backbone == 'SpikeFormer':
@@ -342,7 +519,7 @@ def delete_files(args):
             os.remove(cls_dir)
 
 
-def setup(args, DEVICE):
+def setup(args, DEVICE, train_loaders=None):
     # set up default hyper-parameters
     if args.framework == 'byol':
         args.weight_decay = 1.5e-6
@@ -403,7 +580,7 @@ def setup(args, DEVICE):
     fitlog.add_hyper(args)
     fitlog.add_hyper_in_file(__file__)
 
-    criterion_cls = nn.CrossEntropyLoss()
+    criterion_cls = _build_lincls_criterion(args, train_loaders, DEVICE)
     optimizer_cls = torch.optim.Adam(classifier.parameters(), lr=args.lr_cls)
 
     schedulers = []
@@ -470,7 +647,7 @@ def _get_backbone_features(args, model, sample):
     return feat
 
 
-def calculate_augpred_loss(args, sample, model, DEVICE):
+def calculate_augpred_loss(args, sample, model, DEVICE, sparsity_tracker=None):
     if augpred_classifier is None:
         return None
 
@@ -478,17 +655,19 @@ def calculate_augpred_loss(args, sample, model, DEVICE):
     aug_name = augpred_transforms[aug_idx]
     aug_sample = _to_tensor(gen_aug(sample, aug_name)).to(DEVICE).float()
     aug_sample = apply_input_encoding(aug_sample, args)
+    if sparsity_tracker is not None:
+        sparsity_tracker.observe_input(aug_sample)
     labels = torch.full((aug_sample.shape[0],), aug_idx, dtype=torch.long, device=DEVICE)
     feat = _get_backbone_features(args, model, aug_sample)
     logits = augpred_classifier(feat)
     return augpred_criterion(logits, labels)
 
 
-def calculate_model_loss(args, sample, target, model, criterion, DEVICE, recon=None, nn_replacer=None):
+def calculate_model_loss(args, sample, target, model, criterion, DEVICE, recon=None, nn_replacer=None, sparsity_tracker=None):
     if args.framework == 'augpred':
         if augpred_classifier is None:
             raise ValueError('AugPred framework requires augmentation head. Check --use_augpred/--augpred_transforms.')
-        return calculate_augpred_loss(args, sample, model, DEVICE)
+        return calculate_augpred_loss(args, sample, model, DEVICE, sparsity_tracker=sparsity_tracker)
 
     aug_sample1 = _to_tensor(gen_aug(sample, args.aug1))
     aug_sample2 = _to_tensor(gen_aug(sample, args.aug2))
@@ -496,6 +675,9 @@ def calculate_model_loss(args, sample, target, model, criterion, DEVICE, recon=N
         DEVICE).long()
     aug_sample1 = apply_input_encoding(aug_sample1, args)
     aug_sample2 = apply_input_encoding(aug_sample2, args)
+    if sparsity_tracker is not None:
+        sparsity_tracker.observe_input(aug_sample1)
+        sparsity_tracker.observe_input(aug_sample2)
     if args.framework in ['byol', 'simsiam']:
         assert args.criterion == 'cos_sim'
     if args.framework in ['tstcc', 'simclr', 'nnclr']:
@@ -533,7 +715,7 @@ def calculate_model_loss(args, sample, target, model, criterion, DEVICE, recon=N
         ctx_loss = criterion(p1, p2)
         loss = tmp_loss * args.lambda1 + ctx_loss * args.lambda2
     if hasattr(args, 'use_augpred') and args.use_augpred and augpred_classifier is not None:
-        augpred_loss = calculate_augpred_loss(args, sample, model, DEVICE)
+        augpred_loss = calculate_augpred_loss(args, sample, model, DEVICE, sparsity_tracker=sparsity_tracker)
         loss = loss + args.augpred_lambda * augpred_loss
     return loss
 
@@ -547,8 +729,14 @@ def train(train_loaders, val_loader, model, logger, fitlog, DEVICE, optimizers, 
     log_every = int(getattr(args, "batch_log_every", 20))
     if log_every <= 0:
         log_every = 20
+    epoch_tracker = SparsityTracker(
+        model,
+        enabled=bool(getattr(args, "report_sparsity", True)),
+        eps=float(getattr(args, "sparsity_eps", 1e-8)),
+    )
 
     for epoch in range(args.n_epoch):
+        epoch_tracker.reset()
         epoch_start = time.time()
         print(f"[pretrain] epoch {epoch + 1}/{args.n_epoch} start")
         logger.debug(f'\nEpoch : {epoch}')
@@ -568,7 +756,17 @@ def train(train_loaders, val_loader, model, logger, fitlog, DEVICE, optimizers, 
                 if sample.size(0) != args.batch_size:
                     continue
                 n_batches += 1
-                loss = calculate_model_loss(args, sample, target, model, criterion, DEVICE, recon=recon, nn_replacer=nn_replacer)
+                loss = calculate_model_loss(
+                    args,
+                    sample,
+                    target,
+                    model,
+                    criterion,
+                    DEVICE,
+                    recon=recon,
+                    nn_replacer=nn_replacer,
+                    sparsity_tracker=epoch_tracker,
+                )
                 total_loss += loss.item()
                 loss.backward()
                 for optimizer in optimizers:
@@ -604,6 +802,7 @@ def train(train_loaders, val_loader, model, logger, fitlog, DEVICE, optimizers, 
         logger.debug(f'Train Loss     : {train_epoch_loss:.4f}')
         print(f"[pretrain] epoch {epoch + 1}/{args.n_epoch} train_loss={train_epoch_loss:.4f}")
         fitlog.add_loss(train_epoch_loss, name="pretrain training loss", step=epoch)
+        _log_sparsity("pretrain_sparsity", epoch_tracker, epoch=epoch, fitlog=fitlog)
 
         if args.cases in ['subject', 'subject_large']:
             with torch.no_grad():
@@ -618,8 +817,16 @@ def train(train_loaders, val_loader, model, logger, fitlog, DEVICE, optimizers, 
                     if sample.size(0) != args.batch_size:
                         continue
                     n_batches += 1
-                    loss = calculate_model_loss(args, sample, target, model, criterion, DEVICE, recon=recon,
-                                                nn_replacer=nn_replacer)
+                    loss = calculate_model_loss(
+                        args,
+                        sample,
+                        target,
+                        model,
+                        criterion,
+                        DEVICE,
+                        recon=recon,
+                        nn_replacer=nn_replacer,
+                    )
                     total_loss += loss.item()
                 val_epoch_loss = total_loss / n_batches
                 if val_epoch_loss <= (min_val_loss - args.early_stop_min_delta):
@@ -646,12 +853,18 @@ def train(train_loaders, val_loader, model, logger, fitlog, DEVICE, optimizers, 
                         f'(patience={args.early_stop_patience}, best_val_loss={min_val_loss:.4f})'
                     )
                     break
+    epoch_tracker.close()
     return best_model
 
 
 def test(test_loader, best_model, logger, fitlog, DEVICE, criterion, args):
     model, _ = setup_model_optm(args, DEVICE, classifier=False)
     model.load_state_dict(best_model)
+    tracker = SparsityTracker(
+        model,
+        enabled=bool(getattr(args, "report_sparsity", True)),
+        eps=float(getattr(args, "sparsity_eps", 1e-8)),
+    )
     with torch.no_grad():
         model.eval()
         total_loss = 0
@@ -660,10 +873,22 @@ def test(test_loader, best_model, logger, fitlog, DEVICE, criterion, args):
             if sample.size(0) != args.batch_size:
                 continue
             n_batches += 1
-            loss = calculate_model_loss(args, sample, target, model, criterion, DEVICE, recon=recon, nn_replacer=nn_replacer)
+            loss = calculate_model_loss(
+                args,
+                sample,
+                target,
+                model,
+                criterion,
+                DEVICE,
+                recon=recon,
+                nn_replacer=nn_replacer,
+                sparsity_tracker=tracker,
+            )
             total_loss += loss.item()
         logger.debug(f'Test Loss     : {total_loss / n_batches:.4f}')
         fitlog.add_best_metric({"dev": {"pretrain test loss": total_loss / n_batches}})
+        _log_sparsity("pretrain_test_sparsity", tracker, fitlog=fitlog)
+    tracker.close()
 
     return model
 
@@ -684,12 +909,29 @@ def lock_backbone(model, args):
     return trained_backbone
 
 
-def calculate_lincls_output(sample, target, trained_backbone, classifier, criterion, args):
+def calculate_lincls_output(
+    sample,
+    target,
+    trained_backbone,
+    classifier,
+    criterion,
+    args,
+    sparsity_tracker=None,
+    class_log_prior=None,
+    temperature: float = 1.0,
+):
     sample = apply_input_encoding(sample, args)
+    if sparsity_tracker is not None:
+        sparsity_tracker.observe_input(sample)
     _, feat = trained_backbone(sample)
     if len(feat.shape) == 3:
         feat = feat.reshape(feat.shape[0], -1)
     output = classifier(feat)
+    tau = float(getattr(args, "lincls_logit_adjust_tau", 0.0))
+    if class_log_prior is not None and tau > 0:
+        output = output - tau * class_log_prior.unsqueeze(0)
+    if float(temperature) != 1.0:
+        output = output / float(max(temperature, 1e-6))
     loss = criterion(output, target)
     _, predicted = torch.max(output.data, 1)
     return loss, predicted, feat
@@ -733,16 +975,74 @@ def _apply_lincls_finetune_settings(trained_backbone, args):
         else:
             for p in trained_backbone.core.blocks[-1].parameters():
                 p.requires_grad = True
+    elif bb_name == 'SNN_Transformer':
+        # Wrapper around SeqSNNiSpikformerBackbone + optional SensorChannelGate; core stack matches iSpikformer.
+        if args.lincls_finetune_scope == 'all':
+            for p in trained_backbone.parameters():
+                p.requires_grad = True
+        else:
+            for p in trained_backbone._core.core.blocks[-1].parameters():
+                p.requires_grad = True
     else:
         raise ValueError(
             f"--lincls_finetune_backbone is not supported for backbone={bb_name} yet. "
-            f"Use SFCN/FCN/SResNet1D/ViT1D/SeqSNNiSpikformerBackbone, or extend _apply_lincls_finetune_settings()."
+            f"Use SFCN/FCN/SResNet1D/ViT1D/SNN_Transformer/SeqSNNiSpikformerBackbone, or extend _apply_lincls_finetune_settings()."
         )
+
+
+def _sweep_temperature_for_macrof1(
+    val_loader,
+    trained_backbone,
+    classifier,
+    DEVICE,
+    args,
+    class_log_prior=None,
+):
+    tmin = float(getattr(args, "lincls_temp_min", 0.7))
+    tmax = float(getattr(args, "lincls_temp_max", 1.6))
+    tsteps = int(getattr(args, "lincls_temp_steps", 10))
+    if tsteps < 1:
+        return 1.0, -1.0
+    if tmax < tmin:
+        tmin, tmax = tmax, tmin
+    if tsteps == 1:
+        temps = [tmin]
+    else:
+        temps = np.linspace(tmin, tmax, num=tsteps).tolist()
+
+    best_temp = 1.0
+    best_macro = -1.0
+    with torch.no_grad():
+        trained_backbone.eval()
+        classifier.eval()
+        for temp in temps:
+            trgs = np.array([])
+            preds = np.array([])
+            for sample, target, domain in val_loader:
+                sample, target = sample.to(DEVICE).float(), target.to(DEVICE).long()
+                _, predicted, _ = calculate_lincls_output(
+                    sample,
+                    target,
+                    trained_backbone,
+                    classifier,
+                    criterion=nn.CrossEntropyLoss(),
+                    args=args,
+                    class_log_prior=class_log_prior,
+                    temperature=float(temp),
+                )
+                trgs = np.append(trgs, target.data.cpu().numpy())
+                preds = np.append(preds, predicted.data.cpu().numpy())
+            macro = f1_score(trgs, preds, average='macro', zero_division=0) * 100 if len(trgs) else -1.0
+            if macro >= best_macro:
+                best_macro = macro
+                best_temp = float(temp)
+    return best_temp, best_macro
 
 
 def train_lincls(train_loaders, val_loader, trained_backbone, classifier, logger, fitlog, DEVICE, optimizer, criterion, args):
     best_lincls = None
     min_val_loss = 1e8
+    max_val_macrof = -1.0
     no_improve_epochs = 0
 
     # Default: only train the linear classifier; optionally finetune part of the backbone too.
@@ -759,14 +1059,44 @@ def train_lincls(train_loaders, val_loader, trained_backbone, classifier, logger
             # keep weight decay on head only (backbone often does better without extra L2 in finetune)
         )
 
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.n_epoch, eta_min=0)
+    class_log_prior = _compute_class_log_prior(train_loaders, args.n_class, DEVICE)
+
+    lincls_scheduler = str(getattr(args, "lincls_scheduler", "cosine")).lower()
+    if lincls_scheduler == "cosine":
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.n_epoch, eta_min=0)
+        step_scheduler_per_batch = False
+    elif lincls_scheduler == "onecycle":
+        steps_per_epoch = int(sum(max(1, len(loader)) for loader in train_loaders))
+        max_lrs = [pg["lr"] for pg in optimizer.param_groups]
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            max_lr=max_lrs,
+            epochs=args.n_epoch,
+            steps_per_epoch=max(1, steps_per_epoch),
+            pct_start=0.3,
+            anneal_strategy="cos",
+            div_factor=25.0,
+            final_div_factor=1e4,
+        )
+        step_scheduler_per_batch = True
+    elif lincls_scheduler == "none":
+        scheduler = None
+        step_scheduler_per_batch = False
+    else:
+        raise ValueError(f"Unknown --lincls_scheduler {lincls_scheduler!r}; use cosine|onecycle|none")
 
     wall_start = time.time()
     log_every = int(getattr(args, "batch_log_every", 20))
     if log_every <= 0:
         log_every = 20
+    epoch_tracker = SparsityTracker(
+        trained_backbone,
+        enabled=bool(getattr(args, "report_sparsity", True)),
+        eps=float(getattr(args, "sparsity_eps", 1e-8)),
+    )
 
     for epoch in range(args.n_epoch):
+        epoch_tracker.reset()
         epoch_start = time.time()
         print(f"[lincls] epoch {epoch + 1}/{args.n_epoch} start")
         if finetune and any(p.requires_grad for p in trained_backbone.parameters()):
@@ -785,7 +1115,16 @@ def train_lincls(train_loaders, val_loader, trained_backbone, classifier, logger
                 loader_len = None
             for idx, (sample, target, domain) in enumerate(train_loader):
                 sample, target = sample.to(DEVICE).float(), target.to(DEVICE).long()
-                loss, predicted, _ = calculate_lincls_output(sample, target, trained_backbone, classifier, criterion, args)
+                loss, predicted, _ = calculate_lincls_output(
+                    sample,
+                    target,
+                    trained_backbone,
+                    classifier,
+                    criterion,
+                    args,
+                    sparsity_tracker=epoch_tracker,
+                    class_log_prior=class_log_prior,
+                )
                 bsz = target.size(0)
                 total_loss += loss.item() * bsz
                 total += bsz
@@ -793,7 +1132,15 @@ def train_lincls(train_loaders, val_loader, trained_backbone, classifier, logger
 
                 optimizer.zero_grad()
                 loss.backward()
+                grad_clip = float(getattr(args, "lincls_grad_clip", 0.0))
+                if grad_clip > 0:
+                    params = list(classifier.parameters())
+                    if finetune:
+                        params += [p for p in trained_backbone.parameters() if p.requires_grad]
+                    torch.nn.utils.clip_grad_norm_(params, max_norm=grad_clip)
                 optimizer.step()
+                if scheduler is not None and step_scheduler_per_batch:
+                    scheduler.step()
                 if ((idx + 1) % log_every) == 0:
                     cur_loss = total_loss / max(total, 1)
                     cur_acc = float(correct) * 100.0 / max(total, 1)
@@ -822,8 +1169,9 @@ def train_lincls(train_loaders, val_loader, trained_backbone, classifier, logger
         print(f"[lincls] epoch {epoch + 1}/{args.n_epoch} train_loss={mean_train_loss:.4f} train_acc={acc_train:.2f}")
         fitlog.add_loss(mean_train_loss, name="Train Loss", step=epoch)
         fitlog.add_metric({"dev": {"Train Acc": acc_train}}, step=epoch)
+        _log_sparsity("lincls_sparsity", epoch_tracker, epoch=epoch, fitlog=fitlog)
 
-        if args.scheduler:
+        if scheduler is not None and (not step_scheduler_per_batch) and args.scheduler:
             scheduler.step()
 
         if args.cases in ['subject', 'subject_large']:
@@ -838,31 +1186,57 @@ def train_lincls(train_loaders, val_loader, trained_backbone, classifier, logger
                 total_loss = 0
                 total = 0
                 correct = 0
+                trgs = np.array([])
+                preds = np.array([])
                 for idx, (sample, target, domain) in enumerate(val_loader):
                     sample, target = sample.to(DEVICE).float(), target.to(DEVICE).long()
-                    loss, predicted, _ = calculate_lincls_output(sample, target, trained_backbone, classifier, criterion, args)
+                    loss, predicted, _ = calculate_lincls_output(
+                        sample,
+                        target,
+                        trained_backbone,
+                        classifier,
+                        criterion,
+                        args,
+                        class_log_prior=class_log_prior,
+                    )
                     bsz = target.size(0)
                     total_loss += loss.item() * bsz
                     total += bsz
                     correct += (predicted == target).sum()
+                    trgs = np.append(trgs, target.data.cpu().numpy())
+                    preds = np.append(preds, predicted.data.cpu().numpy())
                 acc_val = float(correct) * 100.0 / total
                 mean_val_loss = total_loss / total
-                if mean_val_loss <= (min_val_loss - args.early_stop_min_delta):
-                    min_val_loss = mean_val_loss
-                    best_lincls = deepcopy(classifier.state_dict())
-                    print('update')
-                    no_improve_epochs = 0
+                macrof_val = f1_score(trgs, preds, average='macro', zero_division=0) * 100
+                select_metric = str(getattr(args, "lincls_select_metric", "loss")).lower()
+                if select_metric == "macrof1":
+                    improved = macrof_val >= (max_val_macrof + args.early_stop_min_delta)
+                    if improved:
+                        max_val_macrof = macrof_val
+                        best_lincls = deepcopy(classifier.state_dict())
+                        print('update macroF')
+                        no_improve_epochs = 0
+                    else:
+                        no_improve_epochs += 1
                 else:
-                    no_improve_epochs += 1
+                    if mean_val_loss <= (min_val_loss - args.early_stop_min_delta):
+                        min_val_loss = mean_val_loss
+                        best_lincls = deepcopy(classifier.state_dict())
+                        print('update loss')
+                        no_improve_epochs = 0
+                    else:
+                        no_improve_epochs += 1
                 logger.debug(f'epoch val loss     : {mean_val_loss:.4f}, val acc     : {acc_val:.4f}')
                 elapsed = time.time() - epoch_start
                 total_elapsed = time.time() - wall_start
                 print(
                     f"[lincls] epoch {epoch + 1}/{args.n_epoch} val_loss={mean_val_loss:.4f} "
-                    f"val_acc={acc_val:.2f} epoch_time={elapsed:.1f}s total={total_elapsed/60:.1f}m"
+                    f"val_acc={acc_val:.2f} val_macroF={macrof_val:.2f} "
+                    f"epoch_time={elapsed:.1f}s total={total_elapsed/60:.1f}m"
                 )
                 fitlog.add_loss(mean_val_loss, name="Val Loss", step=epoch)
                 fitlog.add_metric({"dev": {"Val Acc": acc_val}}, step=epoch)
+                fitlog.add_metric({"dev": {"Val macroF": macrof_val}}, step=epoch)
                 if (
                     getattr(args, "early_stop_patience", 0) > 0
                     and no_improve_epochs >= args.early_stop_patience
@@ -872,12 +1246,44 @@ def train_lincls(train_loaders, val_loader, trained_backbone, classifier, logger
                         f'(patience={args.early_stop_patience}, best_val_loss={min_val_loss:.4f})'
                     )
                     break
-    return best_lincls
+    epoch_tracker.close()
+    if best_lincls is None:
+        best_lincls = deepcopy(classifier.state_dict())
+
+    best_temp = 1.0
+    if bool(getattr(args, "lincls_calibrate_temperature", False)) and args.cases not in ['subject', 'subject_large']:
+        classifier.load_state_dict(best_lincls)
+        best_temp, best_temp_macro = _sweep_temperature_for_macrof1(
+            val_loader,
+            trained_backbone,
+            classifier,
+            DEVICE,
+            args,
+            class_log_prior=class_log_prior,
+        )
+        print(f"[lincls] calibrated temperature={best_temp:.4f} val_macroF={best_temp_macro:.2f}")
+
+    payload = {
+        "state_dict": best_lincls,
+        "temperature": float(best_temp),
+        "logit_adjust_tau": float(getattr(args, "lincls_logit_adjust_tau", 0.0)),
+        "class_log_prior": class_log_prior.detach().cpu().tolist() if class_log_prior is not None else None,
+    }
+    return payload
 
 
 def test_lincls(test_loader, trained_backbone, best_lincls, logger, fitlog, DEVICE, criterion, args, plt=False):
     classifier = setup_linclf(args, DEVICE, trained_backbone.out_dim)
-    classifier.load_state_dict(best_lincls)
+    calib_temperature = 1.0
+    class_log_prior = None
+    if isinstance(best_lincls, dict) and "state_dict" in best_lincls:
+        classifier.load_state_dict(best_lincls["state_dict"])
+        calib_temperature = float(best_lincls.get("temperature", 1.0))
+        log_prior_raw = best_lincls.get("class_log_prior", None)
+        if log_prior_raw is not None:
+            class_log_prior = torch.as_tensor(log_prior_raw, dtype=torch.float32, device=DEVICE)
+    else:
+        classifier.load_state_dict(best_lincls)
     total_loss = 0
     total = 0
     correct = 0
@@ -885,12 +1291,27 @@ def test_lincls(test_loader, trained_backbone, best_lincls, logger, fitlog, DEVI
     feats = None
     trgs = np.array([])
     preds = np.array([])
+    tracker = SparsityTracker(
+        trained_backbone,
+        enabled=bool(getattr(args, "report_sparsity", True)),
+        eps=float(getattr(args, "sparsity_eps", 1e-8)),
+    )
     with torch.no_grad():
         trained_backbone.eval()
         classifier.eval()
         for idx, (sample, target, domain) in enumerate(test_loader):
             sample, target = sample.to(DEVICE).float(), target.to(DEVICE).long()
-            loss, predicted, feat = calculate_lincls_output(sample, target, trained_backbone, classifier, criterion, args)
+            loss, predicted, feat = calculate_lincls_output(
+                sample,
+                target,
+                trained_backbone,
+                classifier,
+                criterion,
+                args,
+                sparsity_tracker=tracker,
+                class_log_prior=class_log_prior,
+                temperature=calib_temperature,
+            )
             bsz = target.size(0)
             total_loss += loss.item() * bsz
             if feats is None:
@@ -920,6 +1341,7 @@ def test_lincls(test_loader, trained_backbone, best_lincls, logger, fitlog, DEVI
         fitlog.add_best_metric({"dev": {"miF": miF}})
         fitlog.add_best_metric({"dev": {"maF": maF}})
         fitlog.add_best_metric({"dev": {"macroF": macroF}})
+        _log_sparsity("test_sparsity", tracker, fitlog=fitlog)
 
         logger.debug(confusion_matrix)
         logger.debug(confusion_matrix.diag() / confusion_matrix.sum(1))
@@ -930,4 +1352,5 @@ def test_lincls(test_loader, trained_backbone, best_lincls, logger, fitlog, DEVI
         sns_plot = sns.heatmap(confusion_matrix, cmap='Blues', annot=True)
         sns_plot.get_figure().savefig(plot_dir_name + '/' + args.model_name + '_confmatrix.png')
         print('plots saved to ', plot_dir_name)
+    tracker.close()
     return acc_test, miF, maF, macroF

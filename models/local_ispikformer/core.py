@@ -9,9 +9,9 @@ from spikingjelly.activation_based import surrogate, neuron, functional
 from .encoder_sj import ConvEncoder, DeltaEncoder, RepeatEncoder
 from .spike_attention_block import Block
 
-tau = 2.0
 backend = "torch"
-detach_reset = True
+DEFAULT_TAU = 2.0
+DEFAULT_DETACH_RESET = True
 
 _SPIKE_ENCODERS = {
     "repeat": RepeatEncoder,
@@ -21,7 +21,7 @@ _SPIKE_ENCODERS = {
 
 
 class DataEmbedding_inverted(nn.Module):
-    def __init__(self, c_in, d_model):
+    def __init__(self, c_in, d_model, tau: float = DEFAULT_TAU, detach_reset: bool = DEFAULT_DETACH_RESET):
         super().__init__()
         self.d_model = d_model
         self.value_embedding = nn.Linear(c_in, d_model)
@@ -54,6 +54,8 @@ class iSpikformer(nn.Module):
         max_length: int = 100,
         num_steps: int = 4,
         heads: int = 8,
+        tau: float = DEFAULT_TAU,
+        detach_reset: bool = DEFAULT_DETACH_RESET,
         qkv_bias: bool = False,
         qk_scale: float = 0.125,
         input_size: Optional[int] = None,
@@ -69,9 +71,9 @@ class iSpikformer(nn.Module):
         enc_key = (encoder_type or "conv").lower()
         if enc_key not in _SPIKE_ENCODERS:
             raise ValueError(f"Unknown encoder_type={encoder_type!r}; use repeat|conv|delta")
-        self.encoder = _SPIKE_ENCODERS[enc_key](num_steps)
+        self.encoder = _SPIKE_ENCODERS[enc_key](num_steps, tau=tau, detach_reset=detach_reset)
 
-        self.emb = DataEmbedding_inverted(max_length, dim)
+        self.emb = DataEmbedding_inverted(max_length, dim, tau=tau, detach_reset=detach_reset)
         self.blocks = nn.ModuleList(
             [
                 Block(
@@ -81,6 +83,7 @@ class iSpikformer(nn.Module):
                     dim=dim,
                     d_ff=self.d_ff,
                     heads=heads,
+                    detach_reset=detach_reset,
                     qkv_bias=qkv_bias,
                     qk_scale=qk_scale,
                 )

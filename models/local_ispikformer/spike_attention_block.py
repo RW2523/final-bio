@@ -2,14 +2,22 @@
 from torch import nn
 from spikingjelly.activation_based import surrogate, neuron
 
-tau = 2.0
 backend = "torch"
-detach_reset = True
+DEFAULT_TAU = 2.0
+DEFAULT_DETACH_RESET = True
 
 
 class SSA(nn.Module):
     def __init__(
-        self, length, tau, common_thr, dim, heads=8, qkv_bias=False, qk_scale=0.25
+        self,
+        length,
+        tau,
+        common_thr,
+        dim,
+        heads=8,
+        qkv_bias=False,
+        qk_scale=0.25,
+        detach_reset: bool = DEFAULT_DETACH_RESET,
     ):
         super().__init__()
         assert dim % heads == 0, f"dim {dim} should be divided by num_heads {heads}."
@@ -140,6 +148,7 @@ class MLP(nn.Module):
         in_features,
         hidden_features=None,
         out_features=None,
+        detach_reset: bool = DEFAULT_DETACH_RESET,
     ):
         super().__init__()
         _ = length
@@ -205,6 +214,7 @@ class Block(nn.Module):
         heads=8,
         qkv_bias=False,
         qk_scale=0.125,
+        detach_reset: bool = DEFAULT_DETACH_RESET,
     ):
         super().__init__()
         self.attn = SSA(
@@ -215,6 +225,7 @@ class Block(nn.Module):
             heads=heads,
             qkv_bias=qkv_bias,
             qk_scale=qk_scale,
+            detach_reset=detach_reset,
         )
         self.mlp = MLP(
             length=length,
@@ -222,6 +233,7 @@ class Block(nn.Module):
             common_thr=common_thr,
             in_features=dim,
             hidden_features=d_ff,
+            detach_reset=detach_reset,
         )
 
     def forward(self, x):

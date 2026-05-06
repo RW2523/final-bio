@@ -7,6 +7,7 @@ RESEARCH_ENCODINGS = (
     "poisson_rate",
     "step_forward",
     "moving_window",
+    "hybrid_ds_rate",
 )
 
 LEGACY_ENCODINGS = (
@@ -134,5 +135,15 @@ def apply_research_input_encoding(sample: torch.Tensor, args) -> torch.Tensor:
             threshold=float(getattr(args, "mw_threshold", 0.15)),
             eps=eps,
         )
+    if encoding == "hybrid_ds_rate":
+        # Fuse change-sensitive (step-forward / delta-sigma like) and rate-sensitive
+        # views into one bipolar stream while keeping shape [B, T, C].
+        sf = step_forward_encode(
+            sample,
+            threshold=float(getattr(args, "sf_threshold", 0.15)),
+            eps=eps,
+        )
+        rate = poisson_rate_encode(sample, eps=eps)
+        return (sf + rate).clamp(min=-1.0, max=1.0)
 
     raise ValueError(f"Unsupported research input encoding: {encoding}")
